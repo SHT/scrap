@@ -68,4 +68,18 @@ impl Display {
     pub fn height(&self) -> usize {
         self.0.height() as usize
     }
+
+    pub fn left(&self) -> usize {
+        self.0.left() as usize
+    }
+
+    pub fn top(&self) -> usize {
+        self.0.top() as usize
+    }
+
+    pub fn id(&self) -> usize {
+        let s = self.0.name();
+        let s = s.replace("\0", "").replace("\\\\.\\DISPLAY", "");
+        s.parse::<usize>().unwrap() as usize
+    }
 }

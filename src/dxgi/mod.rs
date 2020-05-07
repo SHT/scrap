@@ -8,6 +8,7 @@ use winapi::{
     S_OK,
     UINT,
     DXGI_OUTPUT_DESC,
+    DXGI_ADAPTER_DESC1,
     LONG,
     DXGI_MODE_ROTATION,
     ID3D11Device,
@@ -225,10 +226,6 @@ impl Capturer {
 impl Drop for Capturer {
     fn drop(&mut self) {
         unsafe {
-            if !self.surface.is_null() {
-                (*self.surface).Unmap();
-                (*self.surface).Release();
-            }
             (*self.duplication).Release();
             (*self.device).Release();
             (*self.context).Release();
@@ -276,6 +273,20 @@ impl Displays {
             return Some(None);
         }
 
+        let desc3 = unsafe {
+            let mut desc3 = mem::uninitialized();
+            (*self.adapter).GetDesc1(&mut desc3);
+            desc3
+        };
+
+        // let str2 = String::from_utf16(&desc3.Description).unwrap().to_string();
+        // println!("{}", str2);
+        // println!("{}", desc3.DeviceId);
+        // println!("{}", desc3.VendorId);
+
+
+
+
         // Otherwise, we get the next output of the current adapter.
 
         let output = unsafe {
@@ -307,6 +318,12 @@ impl Displays {
             desc
         };
 
+        // TODO
+
+        // let str = String::from_utf16(&desc.DeviceName).unwrap().to_string();
+        // println!("{}", str);
+
+
         // We cast it up to the version needed for desktop duplication.
 
         let mut inner = ptr::null_mut();
@@ -333,7 +350,7 @@ impl Displays {
             (*self.adapter).AddRef();
         }
 
-        Some(Some(Display { inner, adapter: self.adapter, desc }))
+        Some(Some(Display { inner, adapter: self.adapter, desc, adesc: desc3 }))
     }
 }
 
@@ -381,7 +398,8 @@ impl Drop for Displays {
 pub struct Display {
     inner: *mut IDXGIOutput1,
     adapter: *mut IDXGIAdapter1,
-    desc: DXGI_OUTPUT_DESC
+    desc: DXGI_OUTPUT_DESC,
+    adesc: DXGI_ADAPTER_DESC1
 }
 
 impl Display {
@@ -395,16 +413,20 @@ impl Display {
         self.desc.DesktopCoordinates.top
     }
 
+    pub fn left(&self) -> LONG {
+        self.desc.DesktopCoordinates.left
+    }
+
+    pub fn top(&self) -> LONG {
+        self.desc.DesktopCoordinates.top
+    }
+
     pub fn rotation(&self) -> DXGI_MODE_ROTATION {
         self.desc.Rotation
     }
 
-    pub fn name(&self) -> &[u16] {
-        let s = &self.desc.DeviceName;
-        let i = s.iter()
-            .position(|&x| x == 0)
-            .unwrap_or(s.len());
-        &s[..i]
+    pub fn name(&self) -> String {
+        String::from_utf16(&self.desc.DeviceName).unwrap().to_string()
     }
 }
 
